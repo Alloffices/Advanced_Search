@@ -1,0 +1,189 @@
+Simple Search Tutorial
+
+STEP 1
+ TERMINAL
+Create a new rails app
+
+rails new bookstore
+
+STEP 2
+ TERMINAL
+Generate a scaffold so that we can quickly add a resource of Books
+
+rails generate scaffold Book name:string category:string price:decimal isbn:integer
+
+STEP 3
+ TERMINAL
+Run the migration to create the table - Books
+
+rake db:migrate
+
+STEP 4
+ TERMINAL
+Start the rails server
+
+rails server
+
+STEP 5
+ BROWSER
+Navigate to the localhost:3000/books
+
+STEP 6
+ SUBLIME TEXT (CONFIG/ROUTES.RB)
+Add the following root route
+
+root 'books#index'
+view rawroot_route.rb hosted with ❤ by GitHub
+STEP 7
+ SUBLIME TEXT (VIEWS/BOOKS/INDEX.HTML.ERB)
+Add the form to the top of the index page
+
+<%= form_tag books_path, :method => 'get' do %>
+    <%= text_field_tag :search, params[:search] %>
+    <%= submit_tag "Search" %>
+<% end %>
+view rawForm_tag.rb hosted with ❤ by GitHub
+STEP 8
+ SUBLIME TEXT (CONTROLLERS/BOOKS_CONTROLLER.RB)
+Replace the index action with the following
+
+def index
+  @books = Book.where([ 'name LIKE ?', “%#{params[:search]}%” ]) 
+end
+view rawbooks_controller_index.rb hosted with ❤ by GitHub
+STEP 9
+ SUBLIME TEXT (MODELS/BOOK.RB)
+Transfer all the database logic to the model by creating a class method
+
+def self.search(search)
+  if search
+    where(['name LIKE ?', "%#{search}%"])
+  else
+    all
+  end
+end
+view rawbook.rb hosted with ❤ by GitHub
+STEP 10
+ SUBLIME TEXT (CONTROLLERS/BOOKS_CONTROLLERS.RB)
+Replace the index action with the following
+
+def index
+    @books = Book.search(params[:search])
+end
+view rawbooks_controller.rb hosted with ❤ by GitHub
+STEP 11
+ TERMINAL
+rails g model search keywords:string category:string min_price:decimal max_price:decimal isbn:integer
+
+STEP 12
+Run the migration to create the table - Searches
+
+rake db:migrate
+
+STEP 13
+Generate the respective controller
+
+rails g controller searches
+
+STEP 14
+ SUBLIME TEXT (CONFIG/ROUTES.RB)
+Add the the route - resources:searches
+
+  root 'books#index'
+
+  resources :searches
+  resources :books
+view rawroutes.rb hosted with ❤ by GitHub
+STEP 15
+ SUBLIME TEXT (CONTROLLERS/SEARCHES_CONTROLLER.RB)
+Create the 3 actions we need - new / create / show
+
+def new
+  @search = Search.new
+end
+def create
+  @search = Search.create(search_params)
+  redirect_to @search
+end
+def show
+  @search = Search.find(params[:id])
+end
+
+private	
+def search_params
+   params.require(:search).permit(:keywords, :category, :min_price, :max_price, :isbn)
+end
+view rawsearches_controller.rb hosted with ❤ by GitHub
+STEP 16
+ SUBLIME TEXT (BOOKS/INDEX.HTML.ERB)
+Create a link to the advanced search
+
+<%= link_to "Advanced Search", new_search_path %>
+view rawbooks_views_link.rb hosted with ❤ by GitHub
+STEP 17
+ SUBLIME TEXT (SEARCHES/NEW.HTML.ERB)
+Create the form in the new template of the searches _controller
+
+<h1>Advanced Search</h1>
+
+<%= form_for @search do |s| %>
+  <div class="field">
+    <%= s.label :keywords %><br />
+    <%= s.text_field :keywords %>
+  </div>
+  <div class="field">
+    <%= s.label :category_id %><br />
+    <%= s.select :category, options_for_select(@categories), :include_blank => true %>
+  </div>
+  <div class="field">
+    <%= s.label :min_price, "Price Range" %><br />
+    <%= s.text_field :min_price, size: 10 %> -
+    <%= s.text_field :max_price, size: 10 %>
+  </div>
+  <div class="actions"><%= s.submit "Search" %></div>
+  
+<% end %>
+view rawform_new.html.rb hosted with ❤ by GitHub
+STEP 18
+ SUBLIME TEXT (CONTROLLERS/SEARCHES_CONTROLLER)
+Create a variable “@categories” in the new action so that you can fetch all the values of the categories column without repeating values
+
+def new
+   @search = Search.new
+   @categories = Book.uniq.pluck(:category)
+end
+view rawcategories_uniq.rb hosted with ❤ by GitHub
+STEP 19
+ SUBLIME TEXT (MODEL/SEARCH.RB)
+Create a method called "search_books" and inside, the respective queries to the database
+
+def search_books
+   
+   books = Book.all
+   
+   books = books.where("name like ?", "%#{keywords}%") if keywords.present?
+   books = books.where("category like ?", category) if category.present?
+   books = books.where("price >= ?", min_price) if min_price.present?
+   books = books.where("price <= ?", max_price) if max_price.present?
+   
+   return books
+end
+view rawsearch.rb hosted with ❤ by GitHub
+STEP 20
+ SUBLIME TEXT (VIEWS/SEARCHES/SHOW.HTML.ERB)
+Finally, create the show action to display the search results
+
+<h1>Search Result</h1>
+<% if @search.search_books.empty? %>
+	<p>No Records Found</p>
+<% else %>
+	<% @search.search_books.each do |c| %>
+		<div>	
+			<h1><%= c.name %></h1>
+			<p>Price: $<%= c.price %></p>
+			<p>Category: <%= c.category %></p>
+			<p>ISBN: <%= c.isbn %></p>
+		</div>
+	<% end %>
+<% end %>
+view rawsearch_show.html.rb hosted with ❤ by GitHub
